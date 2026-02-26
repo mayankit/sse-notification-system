@@ -1,0 +1,53 @@
+# PRODUCTION PATTERN — illustrates how Redis is replaced.
+# Redis service is GONE. App nodes point to external managed Redis.
+# Copy and adapt this for any cloud provider.
+
+# For AWS ElastiCache:
+#   REDIS_URL=rediss://your-cluster.abc.cache.amazonaws.com:6380
+#   REDIS_TLS=true
+
+# For GCP Memorystore:
+#   REDIS_URL=redis://10.0.0.3:6379
+#   REDIS_TLS=false
+
+# For Upstash:
+#   REDIS_URL=rediss://default:token@your.upstash.io:6380
+#   REDIS_TLS=true
+
+# Application code: ZERO changes between dev and prod.
+# Only REDIS_URL and REDIS_TLS change.
+
+services:
+
+  app1:
+    image: your-registry/sse-notifications:latest
+    environment:
+      PORT: 3001
+      SERVER_ID: server_1
+      REDIS_URL: ${REDIS_URL}         # injected from secret manager
+      REDIS_TLS: ${REDIS_TLS}
+    ports:
+      - "3001:3001"
+
+  app2:
+    image: your-registry/sse-notifications:latest
+    environment:
+      PORT: 3002
+      SERVER_ID: server_2
+      REDIS_URL: ${REDIS_URL}
+      REDIS_TLS: ${REDIS_TLS}
+    ports:
+      - "3002:3002"
+
+  app3:
+    image: your-registry/sse-notifications:latest
+    environment:
+      PORT: 3003
+      SERVER_ID: server_3
+      REDIS_URL: ${REDIS_URL}
+      REDIS_TLS: ${REDIS_TLS}
+    ports:
+      - "3003:3003"
+
+  # No redis service here — it's managed externally.
+  # No nginx here — replaced by cloud load balancer (ALB, GCP LB, etc.)

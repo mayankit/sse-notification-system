@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SSE Notification System - Test UI</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #00d9ff;
+    }
+
+    .container {
+      display: flex;
+      gap: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .panel {
+      flex: 1;
+      background: #16213e;
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      min-height: 600px;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #0f3460;
+    }
+
+    .user-name {
+      font-size: 1.4em;
+      font-weight: bold;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9em;
+      padding: 6px 12px;
+      border-radius: 20px;
+      background: #0f3460;
+    }
+
+    .status.connected { color: #00ff88; }
+    .status.offline { color: #ff4757; }
+    .status.reconnecting { color: #ffa502; }
+
+    .queued-banner {
+      background: #e17055;
+      color: white;
+      padding: 10px 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      display: none;
+    }
+
+    .queued-banner.visible {
+      display: block;
+    }
+
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      background: #0f3460;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+
+    .message {
+      background: #1a1a2e;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+
+    .message:last-child {
+      margin-bottom: 0;
+    }
+
+    .message-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .message-sender {
+      font-weight: bold;
+      color: #00d9ff;
+    }
+
+    .message-time {
+      font-size: 0.8em;
+      color: #888;
+    }
+
+    .message-text {
+      line-height: 1.4;
+    }
+
+    .message-badges {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .badge {
+      font-size: 0.75em;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    .badge.queued {
+      background: #e17055;
+      color: white;
+    }
+
+    .badge.replayed {
+      background: #6c5ce7;
+      color: white;
+    }
+
+    .heartbeat {
+      font-size: 0.85em;
+      color: #888;
+      margin-bottom: 15px;
+      padding: 8px 12px;
+      background: #0f3460;
+      border-radius: 8px;
+    }
+
+    .heartbeat.stale {
+      color: #ff4757;
+    }
+
+    .send-form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .send-form select,
+    .send-form input,
+    .send-form button {
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+    }
+
+    .send-form select,
+    .send-form input {
+      background: #0f3460;
+      color: #eee;
+    }
+
+    .send-form input::placeholder {
+      color: #666;
+    }
+
+    .send-form button {
+      cursor: pointer;
+      font-weight: bold;
+      transition: opacity 0.2s;
+    }
+
+    .send-form button:hover {
+      opacity: 0.9;
+    }
+
+    .send-form button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-send {
+      background: #00d9ff;
+      color: #1a1a2e;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .action-buttons button {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: opacity 0.2s;
+    }
+
+    .btn-disconnect {
+      background: #ff4757;
+      color: white;
+    }
+
+    .btn-reconnect {
+      background: #00ff88;
+      color: #1a1a2e;
+    }
+
+    .empty-messages {
+      color: #666;
+      text-align: center;
+      padding: 40px;
+    }
+  </style>
+</head>
+<body>
+  <h1>SSE Notification System</h1>
+  <div class="container">
+    <div class="panel" id="panel-alice">
+      <div class="panel-header">
+        <span class="user-name">Alice</span>
+        <span class="status offline" id="status-alice">Offline</span>
+      </div>
+      <div class="queued-banner" id="queued-alice"></div>
+      <div class="heartbeat" id="heartbeat-alice">No heartbeat yet</div>
+      <div class="messages" id="messages-alice">
+        <div class="empty-messages">No messages yet</div>
+      </div>
+      <div class="send-form">
+        <select id="recipient-alice">
+          <option value="user_bob">Send to Bob</option>
+          <option value="user_carol">Send to Carol</option>
+        </select>
+        <input type="text" id="input-alice" placeholder="Type a message...">
+        <button class="btn-send" onclick="sendMessage('user_alice')">Send</button>
+      </div>
+      <div class="action-buttons">
+        <button class="btn-disconnect" onclick="disconnect('user_alice')">Disconnect</button>
+        <button class="btn-reconnect" onclick="reconnect('user_alice')">Reconnect</button>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-bob">
+      <div class="panel-header">
+        <span class="user-name">Bob</span>
+        <span class="status offline" id="status-bob">Offline</span>
+      </div>
+      <div class="queued-banner" id="queued-bob"></div>
+      <div class="heartbeat" id="heartbeat-bob">No heartbeat yet</div>
+      <div class="messages" id="messages-bob">
+        <div class="empty-messages">No messages yet</div>
+      </div>
+      <div class="send-form">
+        <select id="recipient-bob">
+          <option value="user_alice">Send to Alice</option>
+          <option value="user_carol">Send to Carol</option>
+        </select>
+        <input type="text" id="input-bob" placeholder="Type a message...">
+        <button class="btn-send" onclick="sendMessage('user_bob')">Send</button>
+      </div>
+      <div class="action-buttons">
+        <button class="btn-disconnect" onclick="disconnect('user_bob')">Disconnect</button>
+        <button class="btn-reconnect" onclick="reconnect('user_bob')">Reconnect</button>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-carol">
+      <div class="panel-header">
+        <span class="user-name">Carol</span>
+        <span class="status offline" id="status-carol">Offline</span>
+      </div>
+      <div class="queued-banner" id="queued-carol"></div>
+      <div class="heartbeat" id="heartbeat-carol">No heartbeat yet</div>
+      <div class="messages" id="messages-carol">
+        <div class="empty-messages">No messages yet</div>
+      </div>
+      <div class="send-form">
+        <select id="recipient-carol">
+          <option value="user_alice">Send to Alice</option>
+          <option value="user_bob">Send to Bob</option>
+        </select>
+        <input type="text" id="input-carol" placeholder="Type a message...">
+        <button class="btn-send" onclick="sendMessage('user_carol')">Send</button>
+      </div>
+      <div class="action-buttons">
+        <button class="btn-disconnect" onclick="disconnect('user_carol')">Disconnect</button>
+        <button class="btn-reconnect" onclick="reconnect('user_carol')">Reconnect</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const users = {
+      user_alice: { name: 'Alice', shortId: 'alice' },
+      user_bob: { name: 'Bob', shortId: 'bob' },
+      user_carol: { name: 'Carol', shortId: 'carol' }
+    };
+
+    const connections = {};
+    const lastHeartbeat = {};
+    const hasMessages = { user_alice: false, user_bob: false, user_carol: false };
+
+    function getShortId(userId) {
+      return users[userId]?.shortId || userId;
+    }
+
+    function updateStatus(userId, status, serverId = null) {
+      const shortId = getShortId(userId);
+      const el = document.getElementById(`status-${shortId}`);
+      el.className = `status ${status}`;
+
+      if (status === 'connected' && serverId) {
+        el.textContent = `Connected to: ${serverId}`;
+      } else if (status === 'offline') {
+        el.textContent = 'Offline';
+      } else if (status === 'reconnecting') {
+        el.textContent = 'Reconnecting...';
+      }
+    }
+
+    function updateHeartbeat(userId) {
+      lastHeartbeat[userId] = Date.now();
+    }
+
+    function formatTime(isoString) {
+      const date = new Date(isoString);
+      return date.toLocaleTimeString();
+    }
+
+    function addMessage(userId, msg) {
+      const shortId = getShortId(userId);
+      const container = document.getElementById(`messages-${shortId}`);
+
+      if (!hasMessages[userId]) {
+        container.innerHTML = '';
+        hasMessages[userId] = true;
+      }
+
+      const fromName = users[msg.fromUserId]?.name || msg.fromUserId;
+
+      let badges = '';
+      if (msg.queued) {
+        badges += '<span class="badge queued">queued</span>';
+      }
+      if (msg.replayed) {
+        badges += '<span class="badge replayed">replayed</span>';
+      }
+
+      const messageHtml = `
+        <div class="message">
+          <div class="message-header">
+            <span class="message-sender">${fromName}</span>
+            <span class="message-time">${formatTime(msg.at)}</span>
+          </div>
+          <div class="message-text">${escapeHtml(msg.message)}</div>
+          ${badges ? `<div class="message-badges">${badges}</div>` : ''}
+        </div>
+      `;
+
+      container.insertAdjacentHTML('afterbegin', messageHtml);
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function showQueuedBanner(userId, count) {
+      const shortId = getShortId(userId);
+      const el = document.getElementById(`queued-${shortId}`);
+      el.textContent = `Loading ${count} queued messages...`;
+      el.classList.add('visible');
+    }
+
+    function hideQueuedBanner(userId) {
+      const shortId = getShortId(userId);
+      const el = document.getElementById(`queued-${shortId}`);
+      el.classList.remove('visible');
+    }
+
+    function connect(userId) {
+      if (connections[userId]) {
+        connections[userId].close();
+      }
+
+      updateStatus(userId, 'reconnecting');
+
+      const source = new EventSource(`/events?userId=${userId}`);
+      connections[userId] = source;
+
+      source.addEventListener('connected', (e) => {
+        const data = JSON.parse(e.data);
+        updateStatus(userId, 'connected', data.serverId);
+        updateHeartbeat(userId);
+      });
+
+      source.addEventListener('message', (e) => {
+        const data = JSON.parse(e.data);
+        addMessage(userId, data);
+      });
+
+      source.addEventListener('queued_flush', (e) => {
+        const data = JSON.parse(e.data);
+        if (data.phase === 'start') {
+          showQueuedBanner(userId, data.count);
+        } else if (data.phase === 'end') {
+          hideQueuedBanner(userId);
+        }
+      });
+
+      source.addEventListener('heartbeat', (e) => {
+        updateHeartbeat(userId);
+      });
+
+      source.addEventListener('reconnect', (e) => {
+        const data = JSON.parse(e.data);
+        source.close();
+        updateStatus(userId, 'reconnecting');
+        setTimeout(() => connect(userId), 1000);
+      });
+
+      source.onerror = () => {
+        updateStatus(userId, 'offline');
+      };
+    }
+
+    function disconnect(userId) {
+      if (connections[userId]) {
+        connections[userId].close();
+        connections[userId] = null;
+        updateStatus(userId, 'offline');
+      }
+    }
+
+    function reconnect(userId) {
+      connect(userId);
+    }
+
+    async function sendMessage(fromUserId) {
+      const shortId = getShortId(fromUserId);
+      const recipientEl = document.getElementById(`recipient-${shortId}`);
+      const inputEl = document.getElementById(`input-${shortId}`);
+
+      const toUserId = recipientEl.value;
+      const message = inputEl.value.trim();
+
+      if (!message) return;
+
+      try {
+        const response = await fetch('/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fromUserId, toUserId, message })
+        });
+
+        if (response.ok) {
+          inputEl.value = '';
+        } else {
+          const error = await response.json();
+          alert(`Failed to send: ${error.error}`);
+        }
+      } catch (err) {
+        alert(`Failed to send: ${err.message}`);
+      }
+    }
+
+    function updateHeartbeatDisplay() {
+      for (const userId of Object.keys(users)) {
+        const shortId = getShortId(userId);
+        const el = document.getElementById(`heartbeat-${shortId}`);
+        const lastBeat = lastHeartbeat[userId];
+
+        if (!lastBeat) {
+          el.textContent = 'No heartbeat yet';
+          el.classList.remove('stale');
+        } else {
+          const secondsAgo = Math.floor((Date.now() - lastBeat) / 1000);
+          el.textContent = `Last heartbeat: ${secondsAgo}s ago`;
+
+          if (secondsAgo > 45) {
+            el.classList.add('stale');
+          } else {
+            el.classList.remove('stale');
+          }
+        }
+      }
+    }
+
+    // Handle Enter key for sending messages
+    document.querySelectorAll('input[type="text"]').forEach(input => {
+      input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          const userId = 'user_' + input.id.split('-')[1];
+          sendMessage(userId);
+        }
+      });
+    });
+
+    // Connect all users on page load
+    Object.keys(users).forEach(userId => connect(userId));
+
+    // Update heartbeat display every second
+    setInterval(updateHeartbeatDisplay, 1000);
+  </script>
+</body>
+</html>
