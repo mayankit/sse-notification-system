@@ -24,7 +24,7 @@ A production-grade real-time notification system using Node.js, Express, and Ser
 
 ### macOS / Linux
 ```bash
-git clone https://github.com/YOUR_USERNAME/sse-notification-system.git
+git clone https://github.com/mayankit/sse-notification-system.git
 cd sse-notification-system
 chmod +x scripts/setup-local.sh
 ./scripts/setup-local.sh
@@ -32,7 +32,7 @@ chmod +x scripts/setup-local.sh
 
 ### Windows (Run as Administrator)
 ```powershell
-git clone https://github.com/YOUR_USERNAME/sse-notification-system.git
+git clone https://github.com/mayankit/sse-notification-system.git
 cd sse-notification-system
 .\scripts\setup-local.ps1
 ```
