@@ -2,6 +2,7 @@ const express = require('express')
 const User = require('../models/User')
 const { generateToken } = require('../utils/jwt')
 const { SERVER_ID } = require('../config/index')
+const { incrementMetric } = require('./health')
 
 const router = express.Router()
 
@@ -61,6 +62,7 @@ router.post('/auth/signup', async (req, res) => {
     const token = generateToken(user)
 
     log('INFO', `user registered: ${username}`)
+    incrementMetric('authSuccessTotal')
 
     res.status(201).json({
       message: 'User created successfully',
@@ -107,12 +109,14 @@ router.post('/auth/login', async (req, res) => {
 
     if (!user) {
       log('WARN', `login failed: user not found - ${username}`)
+      incrementMetric('authFailureTotal')
       return res.status(401).json({ error: 'invalid_credentials', message: 'Invalid username or password' })
     }
 
     const isValid = await User.verifyPassword(password, user.password_hash)
     if (!isValid) {
       log('WARN', `login failed: invalid password - ${username}`)
+      incrementMetric('authFailureTotal')
       return res.status(401).json({ error: 'invalid_credentials', message: 'Invalid username or password' })
     }
 
@@ -121,6 +125,7 @@ router.post('/auth/login', async (req, res) => {
     const token = generateToken(user)
 
     log('INFO', `user logged in: ${username}`)
+    incrementMetric('authSuccessTotal')
 
     res.json({
       message: 'Login successful',

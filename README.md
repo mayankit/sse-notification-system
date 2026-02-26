@@ -62,6 +62,57 @@ open http://localhost:3000/dashboard.html
 curl http://localhost:3001/health
 curl http://localhost:3002/health
 curl http://localhost:3003/health
+
+# Grafana Dashboard (admin/admin)
+open http://localhost:3030
+
+# Prometheus UI
+open http://localhost:9090
+```
+
+## Monitoring & Metrics
+
+The system includes built-in monitoring with **Prometheus** and **Grafana**:
+
+| URL | Description | Credentials |
+|-----|-------------|-------------|
+| http://localhost:3030 | Grafana Dashboard | admin / admin |
+| http://localhost:9090 | Prometheus UI | - |
+| http://localhost:3000/metrics | Prometheus metrics | - |
+
+### Available Metrics
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `sse_connected_users` | Gauge | Currently connected SSE users |
+| `sse_messages_sent_total` | Counter | Messages delivered to online users |
+| `sse_messages_queued_total` | Counter | Messages queued for offline users |
+| `sse_connections_total` | Counter | Total SSE connections established |
+| `sse_disconnections_total` | Counter | Total SSE disconnections |
+| `sse_auth_success_total` | Counter | Successful authentications |
+| `sse_auth_failure_total` | Counter | Failed authentications |
+| `sse_errors_total` | Counter | Total errors |
+| `sse_memory_heap_bytes` | Gauge | Heap memory usage |
+| `sse_redis_connected` | Gauge | Redis connection status (1=up, 0=down) |
+| `sse_db_connected` | Gauge | PostgreSQL connection status |
+
+### Data Persistence
+
+All data is persisted across restarts using Docker volumes:
+
+| Service | Volume | Description |
+|---------|--------|-------------|
+| PostgreSQL | `postgres_data` | User accounts, credentials |
+| Redis | `redis_data` | Sessions, message queues (AOF enabled) |
+| Prometheus | `prometheus_data` | Metrics history |
+| Grafana | `grafana_data` | Dashboard configurations |
+
+```bash
+# View volumes
+docker volume ls
+
+# Remove all data (fresh start)
+docker compose down -v
 ```
 
 ## How to Prove No Sticky Sessions

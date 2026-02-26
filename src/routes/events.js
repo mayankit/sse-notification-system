@@ -6,6 +6,7 @@ const inbox = require('../services/inbox')
 const eventStream = require('../services/eventStream')
 const heartbeat = require('../services/heartbeat')
 const { verifyToken, extractToken } = require('../utils/jwt')
+const { incrementMetric } = require('./health')
 
 const router = express.Router()
 let isShuttingDown = false
@@ -96,10 +97,12 @@ router.get('/events', async (req, res) => {
     at: new Date().toISOString()
   })
 
+  incrementMetric('connectionsTotal')
   heartbeat.start(userId)
 
   req.on('close', async () => {
     log('INFO', `connection closed for ${userId}`)
+    incrementMetric('disconnectionsTotal')
     heartbeat.stop(userId)
     await connectionManager.unregister(userId)
     await pubsub.unsubscribe(userId)

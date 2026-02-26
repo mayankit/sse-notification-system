@@ -2,6 +2,7 @@ const express = require('express')
 const { SERVER_ID } = require('../config/index')
 const sender = require('../messaging/sender')
 const { authenticate } = require('../middleware/auth')
+const { incrementMetric } = require('./health')
 
 const router = express.Router()
 
@@ -42,10 +43,12 @@ router.post('/send', authenticate, validateSend, async (req, res) => {
   const fromUserId = req.userId  // From JWT token
 
   log('INFO', `sending message from ${fromUserId} to ${toUserId}`)
+  incrementMetric('messagesReceived')
 
   const result = await sender.send(fromUserId, toUserId, message)
 
   if (!result.success) {
+    incrementMetric('errorsTotal')
     if (result.error === 'rate_limit_exceeded') {
       return res.status(429).json({
         error: 'rate_limit_exceeded',
@@ -53,6 +56,12 @@ router.post('/send', authenticate, validateSend, async (req, res) => {
       })
     }
     return res.status(500).json({ error: result.error, message: result.message })
+  }
+
+  if (result.online) {
+    incrementMetric('messagesSent')
+  } else {
+    incrementMetric('messagesQueued')
   }
 
   return res.status(200).json({
