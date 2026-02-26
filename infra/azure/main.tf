@@ -1,6 +1,6 @@
 #######################################################################
-# SSE Notification System - Azure Infrastructure
-# Terraform configuration for Azure deployment
+# SSE Notification System - Azure Infrastructure (Terraform)
+# Uses the common interface modules for consistent cloud deployment
 #######################################################################
 
 terraform {
@@ -11,27 +11,31 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 3.0"
     }
-    azuread = {
-      source  = "hashicorp/azuread"
-      version = "~> 2.0"
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
     }
   }
-
-  # Uncomment for remote state storage
-  # backend "azurerm" {
-  #   resource_group_name  = "terraform-state-rg"
-  #   storage_account_name = "terraformstate"
-  #   container_name       = "tfstate"
-  #   key                  = "sse-notification.tfstate"
-  # }
 }
 
 # ═══════════════════════════════════════════════════════════════
-# Variables
+# Variables (Using Common Interface)
 # ═══════════════════════════════════════════════════════════════
 
+variable "project_name" {
+  description = "Project name"
+  type        = string
+  default     = "sse-notification"
+}
+
+variable "environment" {
+  description = "Environment"
+  type        = string
+  default     = "production"
+}
+
 variable "resource_group_name" {
-  description = "Name of the resource group"
+  description = "Azure resource group name"
   type        = string
   default     = "sse-notification-rg"
 }
@@ -42,22 +46,98 @@ variable "location" {
   default     = "East US"
 }
 
-variable "environment" {
-  description = "Environment name"
+variable "container_config" {
+  description = "Container configuration"
+  type = object({
+    image          = string
+    port           = number
+    cpu            = number
+    memory         = number
+    min_instances  = number
+    max_instances  = number
+    health_path    = string
+    timeout        = number
+  })
+}
+
+variable "scaling_config" {
+  description = "Auto-scaling configuration"
+  type = object({
+    cpu_target_percent    = number
+    memory_target_percent = number
+    scale_in_cooldown     = number
+    scale_out_cooldown    = number
+  })
+}
+
+variable "database_config" {
+  description = "Database configuration"
+  type = object({
+    name                = string
+    engine_version      = string
+    instance_class      = string
+    storage_gb          = number
+    max_storage_gb      = number
+    multi_az            = bool
+    backup_retention    = number
+    deletion_protection = bool
+  })
+}
+
+variable "redis_config" {
+  description = "Redis configuration"
+  type = object({
+    version           = string
+    instance_class    = string
+    memory_gb         = number
+    high_availability = bool
+    tls_enabled       = bool
+    maxmemory_policy  = string
+  })
+}
+
+variable "app_env_vars" {
+  description = "Application environment variables"
+  type        = map(string)
+  default     = {}
+}
+
+variable "alert_email" {
+  description = "Alert notification email"
   type        = string
-  default     = "production"
+  default     = "alerts@example.com"
 }
 
-variable "min_replicas" {
-  description = "Minimum number of Container App replicas"
-  type        = number
-  default     = 3
+variable "alerts" {
+  description = "Alert definitions"
+  type = list(object({
+    name        = string
+    description = string
+    metric      = string
+    threshold   = number
+    operator    = string
+    period      = number
+    severity    = string
+  }))
+  default = []
 }
 
-variable "max_replicas" {
-  description = "Maximum number of Container App replicas"
-  type        = number
-  default     = 100
+variable "dashboard_config" {
+  description = "Dashboard configuration"
+  type = object({
+    enabled = bool
+    widgets = list(object({
+      title   = string
+      type    = string
+      metrics = list(string)
+      width   = number
+      height  = number
+    }))
+  })
+  default = {
+    enabled = true
+    widgets = []
+  }
 }
 
 # ═══════════════════════════════════════════════════════════════
@@ -73,6 +153,47 @@ provider "azurerm" {
 }
 
 # ═══════════════════════════════════════════════════════════════
+# Instance Class Mapping (Interface -> Azure)
+# ═══════════════════════════════════════════════════════════════
+
+locals {
+  db_instance_class_map = {
+    small  = "B_Standard_B1ms"
+    medium = "GP_Standard_D2s_v3"
+    large  = "GP_Standard_D4s_v3"
+  }
+
+  redis_sku_map = {
+    small  = { capacity = 0, family = "C", sku_name = "Standard" }
+    medium = { capacity = 1, family = "C", sku_name = "Standard" }
+    large  = { capacity = 3, family = "C", sku_name = "Premium" }
+  }
+
+  # Convert millicores to Azure format (e.g., 0.5, 1, 2)
+  container_cpu = var.container_config.cpu / 1000
+}
+
+# ═══════════════════════════════════════════════════════════════
+# Random Passwords
+# ═══════════════════════════════════════════════════════════════
+
+resource "random_string" "suffix" {
+  length  = 6
+  special = false
+  upper   = false
+}
+
+resource "random_password" "db_password" {
+  length  = 32
+  special = false
+}
+
+resource "random_password" "jwt_secret" {
+  length  = 64
+  special = false
+}
+
+# ═══════════════════════════════════════════════════════════════
 # Resource Group
 # ═══════════════════════════════════════════════════════════════
 
@@ -82,7 +203,7 @@ resource "azurerm_resource_group" "rg" {
 
   tags = {
     Environment = var.environment
-    Application = "sse-notification"
+    Application = var.project_name
   }
 }
 
@@ -91,7 +212,7 @@ resource "azurerm_resource_group" "rg" {
 # ═══════════════════════════════════════════════════════════════
 
 resource "azurerm_virtual_network" "vnet" {
-  name                = "sse-notification-vnet"
+  name                = "${var.project_name}-vnet"
   address_space       = ["10.0.0.0/16"]
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
@@ -155,21 +276,21 @@ resource "azurerm_private_dns_zone_virtual_network_link" "postgres" {
 }
 
 # ═══════════════════════════════════════════════════════════════
-# Azure Cache for Redis
+# Azure Cache for Redis (Implements Cache Interface)
 # ═══════════════════════════════════════════════════════════════
 
 resource "azurerm_redis_cache" "redis" {
-  name                = "sse-notification-redis-${random_string.suffix.result}"
+  name                = "${var.project_name}-redis-${random_string.suffix.result}"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
-  capacity            = 1
-  family              = "C"
-  sku_name            = "Standard"
-  enable_non_ssl_port = true
+  capacity            = local.redis_sku_map[var.redis_config.instance_class].capacity
+  family              = local.redis_sku_map[var.redis_config.instance_class].family
+  sku_name            = local.redis_sku_map[var.redis_config.instance_class].sku_name
+  enable_non_ssl_port = !var.redis_config.tls_enabled
   minimum_tls_version = "1.2"
 
   redis_configuration {
-    maxmemory_policy = "volatile-lru"
+    maxmemory_policy = var.redis_config.maxmemory_policy
   }
 
   tags = {
@@ -177,44 +298,28 @@ resource "azurerm_redis_cache" "redis" {
   }
 }
 
-resource "random_string" "suffix" {
-  length  = 6
-  special = false
-  upper   = false
-}
-
-resource "random_password" "db_password" {
-  length  = 32
-  special = false
-}
-
-resource "random_password" "jwt_secret" {
-  length  = 64
-  special = false
-}
-
 # ═══════════════════════════════════════════════════════════════
-# Azure Database for PostgreSQL Flexible Server
+# Azure Database for PostgreSQL (Implements Database Interface)
 # ═══════════════════════════════════════════════════════════════
 
 resource "azurerm_postgresql_flexible_server" "postgres" {
-  name                   = "sse-notification-db-${random_string.suffix.result}"
+  name                   = "${var.project_name}-db-${random_string.suffix.result}"
   resource_group_name    = azurerm_resource_group.rg.name
   location               = azurerm_resource_group.rg.location
-  version                = "16"
+  version                = var.database_config.engine_version
   delegated_subnet_id    = azurerm_subnet.postgres.id
   private_dns_zone_id    = azurerm_private_dns_zone.postgres.id
   administrator_login    = "sseapp"
   administrator_password = random_password.db_password.result
   zone                   = "1"
 
-  storage_mb   = 32768
+  storage_mb   = var.database_config.storage_gb * 1024
   storage_tier = "P4"
 
-  sku_name = "B_Standard_B1ms"  # Change to GP_Standard_D2s_v3 for production
+  sku_name = local.db_instance_class_map[var.database_config.instance_class]
 
-  backup_retention_days        = 7
-  geo_redundant_backup_enabled = false  # Set to true for production
+  backup_retention_days        = var.database_config.backup_retention
+  geo_redundant_backup_enabled = var.database_config.multi_az
 
   tags = {
     Environment = var.environment
@@ -224,7 +329,7 @@ resource "azurerm_postgresql_flexible_server" "postgres" {
 }
 
 resource "azurerm_postgresql_flexible_server_database" "database" {
-  name      = "sseapp"
+  name      = var.database_config.name
   server_id = azurerm_postgresql_flexible_server.postgres.id
   collation = "en_US.utf8"
   charset   = "utf8"
@@ -251,7 +356,7 @@ resource "azurerm_container_registry" "acr" {
 # ═══════════════════════════════════════════════════════════════
 
 resource "azurerm_log_analytics_workspace" "logs" {
-  name                = "sse-notification-logs"
+  name                = "${var.project_name}-logs"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
   sku                 = "PerGB2018"
@@ -267,7 +372,7 @@ resource "azurerm_log_analytics_workspace" "logs" {
 # ═══════════════════════════════════════════════════════════════
 
 resource "azurerm_container_app_environment" "env" {
-  name                       = "sse-notification-env"
+  name                       = "${var.project_name}-env"
   location                   = azurerm_resource_group.rg.location
   resource_group_name        = azurerm_resource_group.rg.name
   log_analytics_workspace_id = azurerm_log_analytics_workspace.logs.id
@@ -280,28 +385,31 @@ resource "azurerm_container_app_environment" "env" {
 }
 
 # ═══════════════════════════════════════════════════════════════
-# Container App
+# Container App (Implements Compute Interface)
 # ═══════════════════════════════════════════════════════════════
 
 resource "azurerm_container_app" "app" {
-  name                         = "sse-notification-app"
+  name                         = "${var.project_name}-app"
   container_app_environment_id = azurerm_container_app_environment.env.id
   resource_group_name          = azurerm_resource_group.rg.name
   revision_mode                = "Single"
 
   template {
-    min_replicas = var.min_replicas
-    max_replicas = var.max_replicas
+    min_replicas = var.container_config.min_instances
+    max_replicas = var.container_config.max_instances
 
     container {
-      name   = "sse-app"
-      image  = "${azurerm_container_registry.acr.login_server}/sse-notification:latest"
-      cpu    = 0.5
-      memory = "1Gi"
+      name   = "app"
+      image  = "${azurerm_container_registry.acr.login_server}/${var.project_name}:latest"
+      cpu    = local.container_cpu
+      memory = "${var.container_config.memory / 1024}Gi"
 
-      env {
-        name  = "PORT"
-        value = "3000"
+      dynamic "env" {
+        for_each = var.app_env_vars
+        content {
+          name  = env.key
+          value = env.value
+        }
       }
 
       env {
@@ -311,42 +419,7 @@ resource "azurerm_container_app" "app" {
 
       env {
         name  = "REDIS_TLS"
-        value = "false"
-      }
-
-      env {
-        name  = "HEARTBEAT_INTERVAL"
-        value = "30000"
-      }
-
-      env {
-        name  = "MAX_CONNECTIONS_PER_SERVER"
-        value = "50000"
-      }
-
-      env {
-        name  = "INBOX_TTL_SECONDS"
-        value = "604800"
-      }
-
-      env {
-        name  = "EVENT_STREAM_MAXLEN"
-        value = "500"
-      }
-
-      env {
-        name  = "EVENT_STREAM_TTL"
-        value = "3600"
-      }
-
-      env {
-        name  = "RATE_LIMIT_MAX"
-        value = "100"
-      }
-
-      env {
-        name  = "RATE_LIMIT_WINDOW_SECONDS"
-        value = "60"
+        value = tostring(var.redis_config.tls_enabled)
       }
 
       env {
@@ -359,15 +432,10 @@ resource "azurerm_container_app" "app" {
         secret_name = "jwt-secret"
       }
 
-      env {
-        name  = "JWT_EXPIRES_IN"
-        value = "7d"
-      }
-
       liveness_probe {
         transport = "HTTP"
-        path      = "/health"
-        port      = 3000
+        path      = var.container_config.health_path
+        port      = var.container_config.port
 
         initial_delay           = 10
         interval_seconds        = 30
@@ -377,8 +445,8 @@ resource "azurerm_container_app" "app" {
 
       readiness_probe {
         transport = "HTTP"
-        path      = "/health"
-        port      = 3000
+        path      = var.container_config.health_path
+        port      = var.container_config.port
 
         interval_seconds        = 10
         timeout                 = 5
@@ -394,7 +462,7 @@ resource "azurerm_container_app" "app" {
 
   ingress {
     external_enabled = true
-    target_port      = 3000
+    target_port      = var.container_config.port
     transport        = "http"
 
     traffic_weight {
@@ -416,7 +484,7 @@ resource "azurerm_container_app" "app" {
 
   secret {
     name  = "database-url"
-    value = "postgresql://sseapp:${random_password.db_password.result}@${azurerm_postgresql_flexible_server.postgres.fqdn}:5432/sseapp?sslmode=require"
+    value = "postgresql://sseapp:${random_password.db_password.result}@${azurerm_postgresql_flexible_server.postgres.fqdn}:5432/${var.database_config.name}?sslmode=require"
   }
 
   secret {
@@ -436,12 +504,69 @@ resource "azurerm_container_app" "app" {
 }
 
 # ═══════════════════════════════════════════════════════════════
-# Outputs
+# Monitoring Module
 # ═══════════════════════════════════════════════════════════════
 
-output "container_app_url" {
-  description = "Container App URL"
+module "monitoring" {
+  source = "../modules/monitoring"
+
+  # Common interface
+  project_name = var.project_name
+  environment  = var.environment
+  alert_email  = var.alert_email
+  alerts       = var.alerts
+  dashboard_config = var.dashboard_config
+
+  # Azure-specific
+  azure_enabled             = true
+  azure_resource_group_name = azurerm_resource_group.rg.name
+  azure_location            = var.location
+  azure_container_app_id    = azurerm_container_app.app.id
+  azure_postgres_id         = azurerm_postgresql_flexible_server.postgres.id
+  azure_redis_id            = azurerm_redis_cache.redis.id
+  azure_log_analytics_workspace_id = azurerm_log_analytics_workspace.logs.id
+
+  # Disable other providers
+  aws_enabled = false
+  gcp_enabled = false
+
+  providers = {
+    aws     = aws
+    google  = google
+    azurerm = azurerm
+  }
+}
+
+# Dummy providers for module (required but not used)
+provider "aws" {
+  region                      = "us-east-1"
+  skip_credentials_validation = true
+  skip_requesting_account_id  = true
+  skip_metadata_api_check     = true
+}
+
+provider "google" {
+  project = "dummy"
+  region  = "us-central1"
+}
+
+# ═══════════════════════════════════════════════════════════════
+# Outputs (Unified Interface)
+# ═══════════════════════════════════════════════════════════════
+
+output "service_url" {
+  description = "Application URL"
   value       = "https://${azurerm_container_app.app.ingress[0].fqdn}"
+}
+
+output "database_endpoint" {
+  description = "Database endpoint"
+  value       = "${azurerm_postgresql_flexible_server.postgres.fqdn}:5432"
+}
+
+output "redis_endpoint" {
+  description = "Redis endpoint"
+  value       = "${azurerm_redis_cache.redis.hostname}:${azurerm_redis_cache.redis.port}"
 }
 
 output "acr_login_server" {
@@ -449,44 +574,12 @@ output "acr_login_server" {
   value       = azurerm_container_registry.acr.login_server
 }
 
-output "acr_username" {
-  description = "Container Registry username"
-  value       = azurerm_container_registry.acr.admin_username
+output "monitoring" {
+  description = "Monitoring configuration"
+  value       = module.monitoring.monitoring_summary
 }
 
-output "acr_password" {
-  description = "Container Registry password"
-  value       = azurerm_container_registry.acr.admin_password
-  sensitive   = true
-}
-
-output "redis_hostname" {
-  description = "Redis hostname"
-  value       = azurerm_redis_cache.redis.hostname
-}
-
-output "redis_port" {
-  description = "Redis port"
-  value       = azurerm_redis_cache.redis.port
-}
-
-output "resource_group" {
-  description = "Resource group name"
-  value       = azurerm_resource_group.rg.name
-}
-
-output "postgres_fqdn" {
-  description = "PostgreSQL server FQDN"
-  value       = azurerm_postgresql_flexible_server.postgres.fqdn
-}
-
-output "postgres_admin_login" {
-  description = "PostgreSQL admin username"
-  value       = azurerm_postgresql_flexible_server.postgres.administrator_login
-}
-
-output "postgres_admin_password" {
-  description = "PostgreSQL admin password"
-  value       = random_password.db_password.result
-  sensitive   = true
+output "dashboard_url" {
+  description = "Monitoring dashboard URL"
+  value       = module.monitoring.dashboard_url
 }

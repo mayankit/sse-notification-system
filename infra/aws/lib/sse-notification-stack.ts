@@ -9,6 +9,8 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as sns from 'aws-cdk-lib/aws-sns';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
@@ -362,6 +364,150 @@ export class SSENotificationStack extends cdk.Stack {
     });
 
     // ═══════════════════════════════════════════════════════════════
+    // CloudWatch Monitoring & Alarms
+    // ═══════════════════════════════════════════════════════════════
+
+    // SNS Topic for alerts
+    const alertTopic = new sns.Topic(this, 'AlertTopic', {
+      topicName: `${id}-alerts`,
+      displayName: 'SSE Notification System Alerts',
+    });
+
+    // CPU Utilization Alarm
+    const cpuAlarm = new cloudwatch.Alarm(this, 'CPUAlarm', {
+      alarmName: `${id}-cpu-high`,
+      alarmDescription: 'CPU utilization exceeded 80%',
+      metric: service.metricCpuUtilization(),
+      threshold: 80,
+      evaluationPeriods: 3,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+    });
+    cpuAlarm.addAlarmAction({ bind: () => ({ alarmActionArn: alertTopic.topicArn }) });
+
+    // Memory Utilization Alarm
+    const memoryAlarm = new cloudwatch.Alarm(this, 'MemoryAlarm', {
+      alarmName: `${id}-memory-high`,
+      alarmDescription: 'Memory utilization exceeded 80%',
+      metric: service.metricMemoryUtilization(),
+      threshold: 80,
+      evaluationPeriods: 3,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+    });
+    memoryAlarm.addAlarmAction({ bind: () => ({ alarmActionArn: alertTopic.topicArn }) });
+
+    // ALB 5xx Error Alarm
+    const alb5xxAlarm = new cloudwatch.Alarm(this, 'ALB5xxAlarm', {
+      alarmName: `${id}-5xx-errors`,
+      alarmDescription: 'ALB 5xx errors exceeded threshold',
+      metric: alb.metrics.httpCodeElb(elbv2.HttpCodeElb.ELB_5XX_COUNT, {
+        period: cdk.Duration.minutes(5),
+        statistic: 'Sum',
+      }),
+      threshold: 10,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+    });
+    alb5xxAlarm.addAlarmAction({ bind: () => ({ alarmActionArn: alertTopic.topicArn }) });
+
+    // Healthy Host Count Alarm
+    const healthyHostAlarm = new cloudwatch.Alarm(this, 'HealthyHostAlarm', {
+      alarmName: `${id}-unhealthy-hosts`,
+      alarmDescription: 'Healthy host count dropped below minimum',
+      metric: targetGroup.metrics.healthyHostCount(),
+      threshold: 1,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
+    });
+    healthyHostAlarm.addAlarmAction({ bind: () => ({ alarmActionArn: alertTopic.topicArn }) });
+
+    // RDS CPU Alarm
+    const rdsAlarm = new cloudwatch.Alarm(this, 'RDSCPUAlarm', {
+      alarmName: `${id}-rds-cpu-high`,
+      alarmDescription: 'RDS CPU utilization exceeded 80%',
+      metric: database.metricCPUUtilization(),
+      threshold: 80,
+      evaluationPeriods: 3,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+    });
+    rdsAlarm.addAlarmAction({ bind: () => ({ alarmActionArn: alertTopic.topicArn }) });
+
+    // CloudWatch Dashboard
+    const dashboard = new cloudwatch.Dashboard(this, 'SSEDashboard', {
+      dashboardName: `${id}-dashboard`,
+    });
+
+    dashboard.addWidgets(
+      new cloudwatch.TextWidget({
+        markdown: '# SSE Notification System\nReal-time monitoring dashboard',
+        width: 24,
+        height: 1,
+      })
+    );
+
+    dashboard.addWidgets(
+      new cloudwatch.GraphWidget({
+        title: 'ECS CPU & Memory Utilization',
+        left: [service.metricCpuUtilization()],
+        right: [service.metricMemoryUtilization()],
+        width: 12,
+        height: 6,
+      }),
+      new cloudwatch.GraphWidget({
+        title: 'ALB Request Count & Latency',
+        left: [alb.metrics.requestCount()],
+        right: [alb.metrics.targetResponseTime()],
+        width: 12,
+        height: 6,
+      })
+    );
+
+    dashboard.addWidgets(
+      new cloudwatch.GraphWidget({
+        title: 'ALB HTTP Responses',
+        left: [
+          alb.metrics.httpCodeTarget(elbv2.HttpCodeTarget.TARGET_2XX_COUNT, { label: '2xx' }),
+          alb.metrics.httpCodeTarget(elbv2.HttpCodeTarget.TARGET_4XX_COUNT, { label: '4xx' }),
+          alb.metrics.httpCodeTarget(elbv2.HttpCodeTarget.TARGET_5XX_COUNT, { label: '5xx' }),
+        ],
+        width: 12,
+        height: 6,
+      }),
+      new cloudwatch.GraphWidget({
+        title: 'Active Connections & Healthy Hosts',
+        left: [alb.metrics.activeConnectionCount()],
+        right: [targetGroup.metrics.healthyHostCount()],
+        width: 12,
+        height: 6,
+      })
+    );
+
+    dashboard.addWidgets(
+      new cloudwatch.GraphWidget({
+        title: 'RDS CPU & Connections',
+        left: [database.metricCPUUtilization()],
+        right: [database.metricDatabaseConnections()],
+        width: 12,
+        height: 6,
+      }),
+      new cloudwatch.GraphWidget({
+        title: 'RDS Storage & IOPS',
+        left: [database.metricFreeStorageSpace()],
+        right: [database.metricReadIOPS(), database.metricWriteIOPS()],
+        width: 12,
+        height: 6,
+      })
+    );
+
+    dashboard.addWidgets(
+      new cloudwatch.AlarmStatusWidget({
+        title: 'Alarm Status',
+        alarms: [cpuAlarm, memoryAlarm, alb5xxAlarm, healthyHostAlarm, rdsAlarm],
+        width: 24,
+        height: 3,
+      })
+    );
+
+    // ═══════════════════════════════════════════════════════════════
     // Outputs
     // ═══════════════════════════════════════════════════════════════
     new cdk.CfnOutput(this, 'LoadBalancerDNS', {
@@ -410,6 +556,18 @@ export class SSENotificationStack extends cdk.Stack {
       value: jwtSecret.secretArn,
       description: 'JWT secret ARN',
       exportName: `${id}-jwt-secret-arn`,
+    });
+
+    new cdk.CfnOutput(this, 'CloudWatchDashboard', {
+      value: `https://${this.region}.console.aws.amazon.com/cloudwatch/home?region=${this.region}#dashboards:name=${id}-dashboard`,
+      description: 'CloudWatch Dashboard URL',
+      exportName: `${id}-dashboard-url`,
+    });
+
+    new cdk.CfnOutput(this, 'AlertTopicArn', {
+      value: alertTopic.topicArn,
+      description: 'SNS Alert Topic ARN (subscribe for alerts)',
+      exportName: `${id}-alert-topic`,
     });
   }
 }
