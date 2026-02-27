@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #######################################################################
-# SSE Notification System - Local Setup Script
+# ChatPulse - Local Setup Script
 # Supports: macOS, Linux (Ubuntu/Debian, RHEL/CentOS/Fedora, Arch)
 #######################################################################
 
@@ -294,7 +294,7 @@ verify_docker() {
 
 # Start the application
 start_application() {
-    print_header "Starting SSE Notification System"
+    print_header "Starting ChatPulse"
 
     # Navigate to project directory
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -325,7 +325,7 @@ start_application() {
     done
 
     print_header "Setup Complete!"
-    echo -e "${GREEN}The SSE Notification System is now running!${NC}\n"
+    echo -e "${GREEN}The ChatPulse is now running!${NC}\n"
     echo -e "Access the application:"
     echo -e "  ${BLUE}Chat UI:${NC}        http://localhost:3000/chat.html  (with login/signup)"
     echo -e "  ${BLUE}Test UI:${NC}        http://localhost:3000"
@@ -351,7 +351,7 @@ start_application() {
 
 # Main execution
 main() {
-    print_header "SSE Notification System - Local Setup"
+    print_header "ChatPulse - Local Setup"
 
     detect_os
 

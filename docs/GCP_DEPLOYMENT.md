@@ -1,6 +1,6 @@
 # GCP Deployment Guide
 
-Deploy the SSE Notification System to Google Cloud Platform using Terraform.
+Deploy the ChatPulse to Google Cloud Platform using Terraform.
 
 ## Architecture
 

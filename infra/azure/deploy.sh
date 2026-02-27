@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #######################################################################
-# Azure Terraform Deployment Script for SSE Notification System
+# Azure Terraform Deployment Script for ChatPulse
 #######################################################################
 
 set -e
@@ -35,7 +35,7 @@ ACTION="${1:-deploy}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
-print_header "SSE Notification System - Azure Deployment"
+print_header "ChatPulse - Azure Deployment"
 
 # Check prerequisites
 check_prerequisites() {

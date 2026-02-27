@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #######################################################################
-# AWS CDK Deployment Script for SSE Notification System
+# AWS CDK Deployment Script for ChatPulse
 #######################################################################
 
 set -e
@@ -30,7 +30,7 @@ ENVIRONMENT="${ENVIRONMENT:-production}"
 DESIRED_COUNT="${DESIRED_COUNT:-3}"
 ACTION="${1:-deploy}"
 
-print_header "SSE Notification System - AWS Deployment"
+print_header "ChatPulse - AWS Deployment"
 
 # Check prerequisites
 check_prerequisites() {
@@ -94,7 +94,7 @@ bootstrap_cdk() {
 
 # Deploy the stack
 deploy_stack() {
-    print_header "Deploying SSE Notification System"
+    print_header "Deploying ChatPulse"
 
     print_info "Configuration:"
     echo "  Region:        $REGION"

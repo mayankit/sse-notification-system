@@ -1,7 +1,7 @@
 
 # Local Setup Guide
 
-Complete guide to run the SSE Notification System locally on any platform.
+Complete guide to run the ChatPulse locally on any platform.
 
 ## Features
 

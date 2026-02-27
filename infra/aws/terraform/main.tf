@@ -1,5 +1,5 @@
 #######################################################################
-# SSE Notification System - AWS Infrastructure (Terraform)
+# ChatPulse - AWS Infrastructure (Terraform)
 # Uses the common interface modules for consistent cloud deployment
 #######################################################################
 

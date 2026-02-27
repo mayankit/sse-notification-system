@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #######################################################################
-# GCP Terraform Deployment Script for SSE Notification System
+# GCP Terraform Deployment Script for ChatPulse
 #######################################################################
 
 set -e
@@ -35,7 +35,7 @@ ACTION="${1:-deploy}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
-print_header "SSE Notification System - GCP Deployment"
+print_header "ChatPulse - GCP Deployment"
 
 # Check prerequisites
 check_prerequisites() {

@@ -17,7 +17,7 @@ new SSENotificationStack(app, 'SSENotificationStack', {
   },
   environment,
   desiredCount,
-  description: 'SSE Notification System - Production-grade real-time notifications',
+  description: 'ChatPulse - Production-grade real-time notifications',
 });
 
 app.synth();

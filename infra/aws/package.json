@@ -1,7 +1,7 @@
 {
   "name": "sse-notification-aws-infra",
   "version": "1.0.0",
-  "description": "AWS CDK infrastructure for SSE Notification System",
+  "description": "AWS CDK infrastructure for ChatPulse",
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",

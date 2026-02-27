@@ -1,11 +1,12 @@
-# SSE Notification System
+# ChatPulse
 
-A production-grade real-time notification system using Node.js, Express, and Server-Sent Events (SSE). Architected to scale to **10 million concurrent users** with zero sticky sessions — all routing and coordination through Redis.
+A production-grade real-time chat engine using Node.js, Express, and **Server-Sent Events (SSE)**. Architected to scale to **10 million concurrent users** with zero sticky sessions — all routing and coordination through Redis pub/sub.
 
 [![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
 [![Redis](https://img.shields.io/badge/Redis-7-red.svg)](https://redis.io/)
+[![SSE](https://img.shields.io/badge/SSE-Powered-orange.svg)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ## Features
@@ -24,16 +25,16 @@ A production-grade real-time notification system using Node.js, Express, and Ser
 
 ### macOS / Linux
 ```bash
-git clone https://github.com/mayankit/sse-notification-system.git
-cd sse-notification-system
+git clone https://github.com/mayankit/chatpulse.git
+cd chatpulse
 chmod +x scripts/setup-local.sh
 ./scripts/setup-local.sh
 ```
 
 ### Windows (Run as Administrator)
 ```powershell
-git clone https://github.com/mayankit/sse-notification-system.git
-cd sse-notification-system
+git clone https://github.com/mayankit/chatpulse.git
+cd chatpulse
 .\scripts\setup-local.ps1
 ```
 

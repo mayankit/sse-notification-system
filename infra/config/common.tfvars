@@ -9,7 +9,7 @@
 # Project Identification
 # ═══════════════════════════════════════════════════════════════
 
-project_name = "sse-notification"
+project_name = "chatpulse"
 environment  = "production"
 
 # ═══════════════════════════════════════════════════════════════
@@ -18,7 +18,7 @@ environment  = "production"
 # ═══════════════════════════════════════════════════════════════
 
 container_config = {
-  image          = "sse-notification:latest"  # Provider will prefix with registry
+  image          = "chatpulse:latest"  # Provider will prefix with registry
   port           = 3000
   cpu            = 1000      # millicores (1000 = 1 vCPU)
   memory         = 512       # MB

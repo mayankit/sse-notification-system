@@ -1,6 +1,6 @@
 # API Reference
 
-Complete API documentation for the SSE Notification System.
+Complete API documentation for the ChatPulse.
 
 ## Base URL
 

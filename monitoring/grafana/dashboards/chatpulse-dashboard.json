@@ -652,7 +652,7 @@
   "refresh": "5s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["sse", "notifications", "real-time"],
+  "tags": ["sse", "chat", "real-time", "chatpulse"],
   "templating": {
     "list": []
   },
@@ -662,8 +662,8 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "SSE Notification System",
-  "uid": "sse-notification-dashboard",
+  "title": "ChatPulse Dashboard",
+  "uid": "chatpulse-dashboard",
   "version": 1,
   "weekStart": ""
 }

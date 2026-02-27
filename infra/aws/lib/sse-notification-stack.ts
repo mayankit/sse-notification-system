@@ -130,7 +130,7 @@ export class SSENotificationStack extends cdk.Stack {
     // Store Redis endpoint in Secrets Manager
     const redisSecret = new secretsmanager.Secret(this, 'RedisSecret', {
       secretName: `${id}/redis-url`,
-      description: 'Redis connection URL for SSE Notification System',
+      description: 'Redis connection URL for ChatPulse',
       generateSecretString: {
         secretStringTemplate: JSON.stringify({
           host: redisCluster.attrRedisEndpointAddress,
@@ -370,7 +370,7 @@ export class SSENotificationStack extends cdk.Stack {
     // SNS Topic for alerts
     const alertTopic = new sns.Topic(this, 'AlertTopic', {
       topicName: `${id}-alerts`,
-      displayName: 'SSE Notification System Alerts',
+      displayName: 'ChatPulse Alerts',
     });
 
     // CPU Utilization Alarm
@@ -438,7 +438,7 @@ export class SSENotificationStack extends cdk.Stack {
 
     dashboard.addWidgets(
       new cloudwatch.TextWidget({
-        markdown: '# SSE Notification System\nReal-time monitoring dashboard',
+        markdown: '# ChatPulse\nReal-time monitoring dashboard',
         width: 24,
         height: 1,
       })

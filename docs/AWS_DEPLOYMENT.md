@@ -1,6 +1,6 @@
 # AWS Deployment Guide
 
-Deploy the SSE Notification System to AWS using CDK (Cloud Development Kit) with a single command.
+Deploy the ChatPulse to AWS using CDK (Cloud Development Kit) with a single command.
 
 ## Architecture
 

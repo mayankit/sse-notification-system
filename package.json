@@ -1,7 +1,7 @@
 {
-  "name": "sse-notification-system",
+  "name": "chatpulse",
   "version": "1.0.0",
-  "description": "Production-grade real-time notification system using SSE and Redis",
+  "description": "Real-time SSE-powered chat engine with Redis pub/sub and horizontal scaling",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",

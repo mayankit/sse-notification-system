@@ -1,5 +1,5 @@
 #######################################################################
-# SSE Notification System - GCP Infrastructure (Terraform)
+# ChatPulse - GCP Infrastructure (Terraform)
 # Uses the common interface modules for consistent cloud deployment
 #######################################################################
 

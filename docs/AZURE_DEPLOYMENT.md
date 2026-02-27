@@ -1,6 +1,6 @@
 # Azure Deployment Guide
 
-Deploy the SSE Notification System to Microsoft Azure using Terraform.
+Deploy the ChatPulse to Microsoft Azure using Terraform.
 
 ## Architecture
 

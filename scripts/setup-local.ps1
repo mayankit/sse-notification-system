@@ -1,5 +1,5 @@
 #######################################################################
-# SSE Notification System - Local Setup Script for Windows
+# ChatPulse - Local Setup Script for Windows
 # Run as Administrator: Right-click PowerShell -> Run as Administrator
 # Then execute: .\scripts\setup-local.ps1
 #######################################################################
@@ -238,7 +238,7 @@ function Install-Git {
 
 # Start the application
 function Start-Application {
-    Write-Header "Starting SSE Notification System"
+    Write-Header "Starting ChatPulse"
 
     # Navigate to project directory
     $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -273,7 +273,7 @@ function Start-Application {
 
     Write-Header "Setup Complete!"
 
-    Write-Host "The SSE Notification System is now running!" -ForegroundColor Green
+    Write-Host "The ChatPulse is now running!" -ForegroundColor Green
     Write-Host ""
     Write-Host "Access the application:" -ForegroundColor White
     Write-Host "  Test UI:        " -NoNewline; Write-Host "http://localhost:3000" -ForegroundColor Cyan
@@ -298,7 +298,7 @@ function Start-Application {
 
 # Main execution
 function Main {
-    Write-Header "SSE Notification System - Local Setup (Windows)"
+    Write-Header "ChatPulse - Local Setup (Windows)"
 
     if (-not (Test-Administrator)) {
         Write-Error "This script must be run as Administrator"

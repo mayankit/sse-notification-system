@@ -1,5 +1,5 @@
 #######################################################################
-# SSE Notification System - Azure Infrastructure (Terraform)
+# ChatPulse - Azure Infrastructure (Terraform)
 # Uses the common interface modules for consistent cloud deployment
 #######################################################################
 

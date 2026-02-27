@@ -1,12 +1,12 @@
 @echo off
 REM #######################################################################
-REM # SSE Notification System - Local Setup Script for Windows (Batch)
+REM # ChatPulse - Local Setup Script for Windows (Batch)
 REM # Run as Administrator: Right-click -> Run as Administrator
 REM #######################################################################
 
 echo.
 echo ===============================================================
-echo   SSE Notification System - Local Setup (Windows)
+echo   ChatPulse - Local Setup (Windows)
 echo ===============================================================
 echo.
 
